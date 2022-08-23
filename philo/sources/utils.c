@@ -5,63 +5,55 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: bkrasnos <bkrasnos@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/08/15 11:01:31 by bkrasnos          #+#    #+#             */
-/*   Updated: 2022/08/15 11:25:37 by bkrasnos         ###   ########.fr       */
+/*   Created: 2022/08/23 13:12:31 by bkrasnos          #+#    #+#             */
+/*   Updated: 2022/08/23 14:37:37 by bkrasnos         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/philo.h"
 
-int	philo_atoi(char *str)
+size_t	get_useconds(void)
 {
-	int			i;
-	long int	n;
+	struct timeval	time;
 
-	i = 0;
-	n = 0;
-	while (str[i] >= '0' && str[i] <= '9')
-	{
-		n = n * 10 + str[i] - '0';
-		i++;
-	}
-	if (n < 0 || ((str[i] < '0' || str[i] > '9') && str[i] != '\0')
-		|| n > INT_MAX)
-		return (0);
-	return (n);
+	gettimeofday(&time, NULL);
+	return (time.tv_sec * 1000000 + time.tv_usec);
 }
 
-int	philo_strncmp(const char *s1, const char *s2, size_t n)
+void	ft_usleep(useconds_t time)
 {
-	size_t			i;
-	unsigned char	*str1;
-	unsigned char	*str2;
+	size_t	t;
 
-	str1 = (unsigned char *)s1;
-	str2 = (unsigned char *)s2;
-	i = 0;
-	while ((str1[i] != '\0' || str2[i] != '\0') && i < n)
-	{
-		if (str1[i] != str2[i])
-			return (str1[i] - str2[i]);
-		i++;
-	}
-	return (0);
+	t = get_useconds();
+	while (get_useconds() - t < time)
+		usleep(1);
 }
 
-int	philo_strlen(const char *str)
+void	print_philo_status(t_philo *philo, char *status)
 {
-	int	size;
-
-	size = 0;
-	while (str[size] != '\0')
-	{
-		size++;
-	}
-	return (size);
+	pthread_mutex_lock(&philo->info->mtx_end);
+	pthread_mutex_unlock(&philo->info->mtx_end);
+	printf("%zu %d %s\n", (get_useconds() - philo->info->start) / 1000, \
+	philo->num, status);
 }
 
-void	philo_free(t_main *main)
+int	ft_atoi(char *str)
 {
-	free(main->philo);
-	free(main->forks);
+	long		number;
+
+	while (*str == ' ' || (*str >= '\t' && *str <= '\r'))
+		str++;
+	if (*str == '-')
+		return (-1);
+	else if (*str == '+')
+		str++;
+	number = 0;
+	while (*str >= '0' && *str <= '9')
+	{
+		if (number > 2147483647)
+			return (-1);
+		number = number * 10 + *str - '0';
+		str++;
+	}
+	return (number);
 }

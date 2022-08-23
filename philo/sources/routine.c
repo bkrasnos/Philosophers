@@ -5,93 +5,70 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: bkrasnos <bkrasnos@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/08/15 11:01:26 by bkrasnos          #+#    #+#             */
-/*   Updated: 2022/08/15 11:25:27 by bkrasnos         ###   ########.fr       */
+/*   Created: 2022/08/23 13:12:30 by bkrasnos          #+#    #+#             */
+/*   Updated: 2022/08/23 14:44:05 by bkrasnos         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/philo.h"
 
-void	*routine(void *args)
+static void	check_philo_must_eat(t_philo *philo)
 {
-	t_main	*main;
-	int		i;
-
-	main = (t_main *)args;
-	i = main->n_thread;
-	if (main->input.num_of_times_eat > 0)
+	if (philo->info->must_eat > 0 && ++philo->num_eat == philo->info->must_eat)
 	{
-		while (main->input.num_of_times_eat > main->philo[i].num_of_times_ate
-			&& main->philo_dead == FALSE)
-			routine_execute(main, i);
-	}
-	else
-	{
-		while (main->philo_dead == FALSE)
+		if (++philo->info->finished_philos == philo->info->num_philos)
 		{
-			if (routine_execute(main, i) == FALSE)
-				break ;
+			philo->info->end = 1;
+			pthread_mutex_lock(&philo->info->mtx_end);
 		}
+	}
+}
+
+void	philo_eat(t_philo *philo)
+{
+	while (1)
+	{
+		if (philo->info->fork_status[philo->r_fork] == FREE)
+		{
+			pthread_mutex_lock(&philo->info->forks[philo->r_fork]);
+			philo->info->fork_status[philo->r_fork] = LOCK;
+			print_philo_status(philo, "has taken fork");
+			pthread_mutex_lock(&philo->info->forks[philo->l_fork]);
+			philo->info->fork_status[philo->l_fork] = LOCK;
+			print_philo_status(philo, "has taken fork");
+			philo->last_eat = get_useconds();
+			print_philo_status(philo, "is eating");
+			check_philo_must_eat(philo);
+			ft_usleep((philo->info->time_to_eat * 1000));
+			philo->info->fork_status[philo->r_fork] = FREE;
+			philo->info->fork_status[philo->l_fork] = FREE;
+			pthread_mutex_unlock(&philo->info->forks[philo->r_fork]);
+			pthread_mutex_unlock(&philo->info->forks[philo->l_fork]);
+			break ;
+		}
+		else
+			usleep(100);
+	}
+}
+
+void	philo_sleep(t_philo *philo)
+{
+	print_philo_status(philo, "is sleeping");
+	ft_usleep((philo->info->time_to_sleep * 1000));
+}
+
+void	philo_think(t_philo *philo)
+{
+	print_philo_status(philo, "is thinking");
+}
+
+void	*philo_life(void *arg)
+{
+	while (1)
+	{
+		philo_eat((t_philo *)arg);
+		philo_sleep((t_philo *)arg);
+		philo_think((t_philo *)arg);
 	}
 	return (NULL);
-}
-
-int	routine_execute(t_main *main, int i)
-{
-	if (philo_eat(main, i) == FALSE)
-		return (FALSE);
-	if (main->input.num_of_times_eat != main->philo[i].num_of_times_ate)
-	{
-		if (philo_sleep(main, i) == FALSE)
-			return (FALSE);
-		if (philo_think(main, i) == FALSE)
-			return (FALSE);
-	}
-	return (TRUE);
-}
-
-void	*checker(void *args)
-{
-	t_main	*main;
-	int		i;
-
-	main = (t_main *)args;
-	i = 0;
-	if (main->input.num_of_times_eat > 0)
-	{
-		while (main->input.num_of_times_eat > main->philo[i].num_of_times_ate
-			&& main->philo_dead == FALSE)
-		{
-			if (philo_is_dead(main, &i) == TRUE)
-				break ;
-		}
-	}
-	else
-	{
-		while (main->philo_dead == FALSE)
-		{
-			if (philo_is_dead(main, &i) == TRUE)
-				break ;
-		}
-	}
-	return (NULL);
-}
-
-int	philo_print(t_main *main, int id, char *color, char *status)
-{
-	long long	now;
-
-	now = delta_time(main->t0);
-	if (main->philo_dead == TRUE)
-		return (FALSE);
-	pthread_mutex_lock(&main->write);
-	if (main->philo_dead == TRUE)
-	{
-		pthread_mutex_unlock(&main->write);
-		return (FALSE);
-	}
-	else
-		printf("%s%-10lld %-3d %-30s%s\n", color, now, id, status, RESET);
-	pthread_mutex_unlock(&main->write);
-	return (TRUE);
 }

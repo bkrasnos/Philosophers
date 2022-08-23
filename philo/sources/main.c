@@ -5,45 +5,45 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: bkrasnos <bkrasnos@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/08/15 11:01:21 by bkrasnos          #+#    #+#             */
-/*   Updated: 2022/08/17 10:50:55 by bkrasnos         ###   ########.fr       */
+/*   Created: 2022/08/23 13:12:28 by bkrasnos          #+#    #+#             */
+/*   Updated: 2022/08/23 14:39:49 by bkrasnos         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/philo.h"
 
-int	main(int argc, char **argv)
+int	start_philos(pthread_t *threads, t_info *info, t_philo *philo)
 {
-	t_main	main;
+	int	i;
 
-	if (error_handling(argc, argv, &main) == FALSE)
-		return (1);
-	if (create_philos(&main) == FALSE)
-		return (1);
-	if (create_forks(&main) == FALSE)
-		return (1);
-	if (main.input.num_philo == 1)
+	i = 0;
+	while (i < info->num_philos)
 	{
-		if (just_one_philo(&main) == FALSE)
+		if (pthread_create(&threads[i], NULL, philo_life, &philo[i]))
+		{
+			write(2, "Pthread create error\n", 22);
 			return (1);
-		return (0);
+		}
+		usleep(50);
+		i++;
 	}
-	if (create_threads(&main) == FALSE)
-		return (1);
-	if (destroy_threads(&main) == FALSE)
-		return (1);
-	philo_free(&main);
 	return (0);
 }
 
-int	just_one_philo(t_main *main)
+int	main(int argc, char **argv)
 {
-	if (pthread_mutex_init(&main->write, NULL) != 0)
-		return (FALSE);
-	main->t0 = get_time();
-	philo_print(main, 1, PURPLE, FORK);
-	exec_action(main->input.time_to_die);
-	philo_print(main, 1, RED, DIED);
-	philo_free(main);
-	return (TRUE);
+	t_philo		*philo;
+	t_info		*info;
+	pthread_t	*threads;
+
+	info = malloc(sizeof(t_info));
+	if (!info || !save_args(argc, argv, info) || init_info(info))
+		return (1);
+	philo = init_philo(info);
+	threads = malloc(info->num_philos * sizeof(pthread_t));
+	if (!philo || !threads || start_philos(threads, info, philo))
+		return (1);
+	check_philos_death(philo, info);
+	kill_philos(threads, info, philo);
+	return (0);
 }
